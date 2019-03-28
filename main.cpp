@@ -104,7 +104,7 @@ int main()
 	InstructionObject Decrement(std::make_pair(new Sub(), high), std::make_pair(new Add(), low));
 	InstructionObject MoveBackward(std::make_pair(new MovB(), high), std::make_pair(new MovF(), low));
 
-	std::ifstream file("..\\test.prob");
+	std::ifstream file("test.prob");
 	std::string contents((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
 
 	double probability = 1;
@@ -148,6 +148,14 @@ int main()
 			std::cout << *ptr;
 		}
 			break;
+		case '{':
+		{
+		}
+		break;
+		case '}':
+		{
+		}
+		break;
 		default:
 			break;
 		}
