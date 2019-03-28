@@ -10,7 +10,7 @@
 #define MAX_PROB 1000000000
 #define MIN_PROB 500
 #define NOP_PROB 100
-#define MAX_INSTR 10
+#define MAX_INSTR 50
 
 //GLOBAL CONFIG
 char array[2046] = { 0 };
@@ -112,7 +112,7 @@ public:
 			(*PossibilitySet[0].first)();
 			occured = PossibilitySet[0].second;
 		}
-		return std::make_pair(PossibilitySet[1].second + ((mode == UP) ? modifier : -modifier), occured + modifier);
+		return std::make_pair(PossibilitySet[1].second + ((mode == UP) ? modifier : -modifier), occured + ((mode == UP) ? modifier : -modifier));
 	}
 private:
 	InstructionObject() = delete;
@@ -141,8 +141,8 @@ int main()
 	InstructionObject Decrement(std::make_pair(new Sub(), high), std::make_pair(new Add(), low));
 	InstructionObject MoveBackward(std::make_pair(new MovB(), high), std::make_pair(new MovF(), low));
 
-	//std::ifstream file("test.prob");
-	std::ifstream file("testprob.prob");
+	std::ifstream file("test.prob");
+	//std::ifstream file("testprob.prob");
 	std::string contents((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
 
 	double probability = 1;
