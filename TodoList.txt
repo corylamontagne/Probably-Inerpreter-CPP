@@ -1,0 +1,9 @@
+FEATURES:
+
+Proper script parsing
+Functions
+Big int for better probability ranges
+
+BUGS:
+
+Instruction count
