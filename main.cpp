@@ -8,8 +8,8 @@
 
 //SETTINGS
 #define MAX_PROB 1000000000
-#define MIN_PROB 500
-#define NOP_PROB 100
+#define MIN_PROB 5000
+#define NOP_PROB 1000
 #define MAX_INSTR 50
 
 //GLOBAL CONFIG
@@ -20,12 +20,6 @@ unsigned seed = (unsigned int)std::chrono::system_clock::now().time_since_epoch(
 std::default_random_engine generator(seed);
 std::uniform_int_distribution<> distribution(0, MAX_PROB);
 
-//TODO: This has to be fixed to account for frequent mode swapping. That in conjunction with
-//the auto mode return to FLAT causes problems.
-//CASE: +i-i+i-i-iiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiof
-//The last DOWN mode instruction does not return to FLAT, the previous instructino already did that
-//This returns us to DOWN mode for the duration of MAX_INSTR. NO BUENO!
-//Rework how instruction counts work.
 int instructionCount = 0, lastInstructionCount = 0;
 
 enum ProbabilityMode
@@ -156,8 +150,8 @@ int main()
 	InstructionObject Decrement(std::make_pair(new Sub(), high), std::make_pair(new Add(), low));
 	InstructionObject MoveBackward(std::make_pair(new MovB(), high), std::make_pair(new MovF(), low));
 
-	//std::ifstream file("test.prob");
-	std::ifstream file("testprob.prob");
+	std::ifstream file("test.prob");
+	//std::ifstream file("testprob.prob");
 	std::string contents((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
 
 	double probability = 1;
