@@ -15,6 +15,7 @@
 //GLOBAL CONFIG
 char array[2046] = { 0 };
 char *ptr = array;
+
 unsigned seed = (unsigned int)std::chrono::system_clock::now().time_since_epoch().count();
 std::default_random_engine generator(seed);
 std::uniform_int_distribution<> distribution(0, MAX_PROB);
@@ -25,7 +26,7 @@ std::uniform_int_distribution<> distribution(0, MAX_PROB);
 //The last DOWN mode instruction does not return to FLAT, the previous instructino already did that
 //This returns us to DOWN mode for the duration of MAX_INSTR. NO BUENO!
 //Rework how instruction counts work.
-int instructionCount = 0;
+int instructionCount = 0, lastInstructionCount = 0;
 
 enum ProbabilityMode
 {
@@ -127,15 +128,21 @@ private:
 	std::vector<std::pair<Instruction*, int> > PossibilitySet;
 };
 
+void ChangeMode(ProbabilityMode m)
+{
+	mode = m;
+}
+
 void IncrementInstructionCount() 
 { 
-	if (mode == UP)
+	instructionCount++;
+	if (lastInstructionCount > 0)
 	{
-		instructionCount++;
-	}
-	if (mode == DOWN)
-	{
-		instructionCount--;
+		lastInstructionCount--;
+		if (lastInstructionCount == 0)
+		{
+			instructionCount = 0;
+		}
 	}
 }
 
@@ -186,42 +193,46 @@ int main()
 		case '+':
 		{
 			set = false;
-			if (mode == FLAT || (instructionCount > 0 && mode == DOWN))
+			if (mode == FLAT || instructionCount == 0)
 			{
 				mode = UP;
 				frame1 = true;
 			}
-			else
+			else if (instructionCount > 0)
 			{
-				if (instructionCount > 0)
+				if (mode != UP)
+				{
+					mode = UP;
+				}
+				else if (mode == UP)
 				{
 					mode = DOWN;
 				}
-				else
-				{
-					mode = FLAT;
-				}
+				lastInstructionCount = instructionCount;
+				instructionCount = 0;
 			}
 		}
 		break;
 		case '-':
 		{
 			set = false;
-			if (mode == FLAT || (instructionCount > 0 && mode == UP))
+			if (mode == FLAT || instructionCount == 0)
 			{
 				mode = DOWN;
 				frame1 = true;
 			}
-			else
+			else if (instructionCount > 0)
 			{
-				if (instructionCount > 0)
+				if (mode != DOWN)
+				{
+					mode = DOWN;
+				}
+				else if (mode == DOWN)
 				{
 					mode = UP;
 				}
-				else
-				{
-					mode = FLAT;
-				}
+				lastInstructionCount = instructionCount;
+				instructionCount = 0;
 			}
 		}
 		break;
@@ -230,19 +241,25 @@ int main()
 			break;
 		}
 
-		if (!frame1 && instructionCount == 0 && mode != FLAT)
+		if (!frame1 && ((instructionCount == 0 && mode == FLAT) || (lastInstructionCount == 0 && instructionCount == 0 && (mode == DOWN || mode == UP))))
 		{
 			mode = FLAT;
+			instructionCount = 0;
+			lastInstructionCount = 0;
 		}
 		if (instructionCount == MAX_INSTR)
 		{
 			if (mode == UP)
 			{
 				mode = DOWN;
+				lastInstructionCount = instructionCount;
+				instructionCount = 0;
 			}
 			else if (mode == DOWN)
 			{
 				mode = UP;
+				lastInstructionCount = instructionCount;
+				instructionCount = 0;
 			}
 		}
 
