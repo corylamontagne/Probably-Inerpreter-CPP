@@ -1,7 +1,7 @@
 FEATURES:
 
 Proper script parsing
-Functions
 Big int for better probability ranges
+Implement probability gates for functions
 
 BUGS:
