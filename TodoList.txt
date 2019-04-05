@@ -1,7 +1,11 @@
 FEATURES:
 
+UNFUCK THE HACK(Rewrite interpreter)
 Proper script parsing
 Big int for better probability ranges
+Recursion
+Adding probability gate to output(input?).
+Unit tests?
 
 BUGS:
 
