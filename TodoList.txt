@@ -2,6 +2,12 @@ FEATURES:
 
 Proper script parsing
 Big int for better probability ranges
-Implement probability gates for functions
 
 BUGS:
+
+occurred probability
+
+CONSIDERATIONS:
+
+Emoji would be intereting. Requires an editor to map emoji to ascii.
+Three variable storage.

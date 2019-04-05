@@ -11,18 +11,22 @@
 #define MAX_PROB 1000000000
 #define MIN_PROB 500
 #define NOP_PROB 100
-#define MAX_INSTR 50
-#define FUNCTION_PROBABILITY_GATE 10000
+#define MAX_INSTR 20
+#define FUNCTION_PROBABILITY_GATE 100000
+#define IF_BLOCK_PROBABILITY 10000
 
 //GLOBAL CONFIG
 char array[2046] = { 0 };
 char *ptr = array;
 
+bool equalityCheckPass = true, ifBlockStarted = true;
+char x = 0, y = 0, z = 0;
 double mainProbability = 1;
 double mainOccuredProbabiltiy = 1;
 bool functionMode = false, functionName = false;
 std::map<std::string, std::string> functions;
 std::string currentFunctionName = "", executingFunctionName = "";
+double gateMultiplier = 1.0;
 
 unsigned seed = (unsigned int)std::chrono::system_clock::now().time_since_epoch().count();
 std::default_random_engine generator(seed);
@@ -34,9 +38,7 @@ enum ProbabilityMode
 {
 	UP = 0,
 	DOWN,
-	FLAT,
-	GATE_UP,
-	GATE_DOWN
+	FLAT
 };
 ProbabilityMode mode = FLAT;
 
@@ -109,7 +111,7 @@ public:
 		}
 
 		int occured = 0;
-		if (probability <= PossibilitySet[2].second)
+		if (probability <= (PossibilitySet[2].second * gateMultiplier))
 		{
 			(*PossibilitySet[2].first)();
 			occured = PossibilitySet[2].second;
@@ -159,6 +161,11 @@ bool ProcessScript(std::string script)
 	//TODO: Fuck this temporary parsing. We need something legit that allows us to create multi character instructions AND functions.
 	for (std::string::iterator it = script.begin(); it != script.end(); ++it)
 	{
+		if (ifBlockStarted && !equalityCheckPass && *it != '}')
+		{
+			continue;
+		}
+
 		if (functionMode && *it != '#')
 		{
 			if (functionName)
@@ -184,6 +191,38 @@ bool ProcessScript(std::string script)
 			bool set = true, frame1 = false;
 			switch (*it)
 			{
+			case '{':
+				ifBlockStarted = true;
+				set = false;
+				break;
+			case '}':
+				ifBlockStarted = false;
+				equalityCheckPass = false;
+				set = false;
+				break;
+			case '=':
+			{
+				set = false;
+				int probability = distribution(generator);
+				equalityCheckPass = (x == y);
+				if (probability <= IF_BLOCK_PROBABILITY)
+				{
+					equalityCheckPass = !equalityCheckPass;
+				}
+			}
+				break;
+			case 'x':
+				set = false;
+				x = *ptr;
+				break;
+			case 'y':
+				set = false;
+				y = *ptr;
+				break;
+			case 'z':
+				set = false;
+				z = *ptr;
+				break;
 			case 'i':
 				Increment();
 				IncrementInstructionCount();
@@ -270,15 +309,21 @@ bool ProcessScript(std::string script)
 						return false;
 					}
 					executingFunctionName = f;
-					//determine chance of probability gate
-					int probability = distribution(generator);
-					if (probability <= FUNCTION_PROBABILITY_GATE)
+					//set gate multiplier
+					int gateProbability = distribution(generator);
+					if (gateProbability < FUNCTION_PROBABILITY_GATE*100)
 					{
-						//TODO: determine how to alter the function probability range
+						//down
+						gateMultiplier = 1000;
+					}
+					else if (gateProbability > MAX_PROB - FUNCTION_PROBABILITY_GATE)
+					{
+						//up
+						gateMultiplier = .1;
 					}
 					bool res = ProcessScript(iter->second);
-					//TODO: Reset the probability gate
-
+					//reset the gate mult
+					gateMultiplier = 1.0;
 					executingFunctionName = "";
 					if (!res)
 					{
@@ -323,8 +368,8 @@ bool ProcessScript(std::string script)
 
 int main()
 {
-	std::ifstream file("test.prob");
-	//std::ifstream file("testprob.prob");
+	//std::ifstream file("test.prob");
+	std::ifstream file("testprob.prob");
 	std::string contents((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
 
 	if (!ProcessScript(contents))
