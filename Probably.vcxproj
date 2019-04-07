@@ -115,7 +115,19 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="LookupTable.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="ProbabilityState.cpp" />
+    <ClCompile Include="ProbabilityStateMachine.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Configuration.h" />
+    <ClInclude Include="GlobalStateInfo.h" />
+    <ClInclude Include="Instruction.h" />
+    <ClInclude Include="InstructionObject.h" />
+    <ClInclude Include="LookupTable.h" />
+    <ClInclude Include="ProbabilityState.h" />
+    <ClInclude Include="ProbabilityStateMachine.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

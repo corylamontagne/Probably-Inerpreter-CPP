@@ -1,0 +1,46 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="main.cpp" />
+    <ClCompile Include="LookupTable.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="ProbabilityState.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="ProbabilityStateMachine.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="src">
+      <UniqueIdentifier>{cfbe4492-65f4-42ce-acfd-284adb049df3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="inc">
+      <UniqueIdentifier>{0b06f15d-d574-4bfd-917a-b52f82c0bd3e}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Configuration.h">
+      <Filter>inc</Filter>
+    </ClInclude>
+    <ClInclude Include="Instruction.h">
+      <Filter>inc</Filter>
+    </ClInclude>
+    <ClInclude Include="InstructionObject.h">
+      <Filter>inc</Filter>
+    </ClInclude>
+    <ClInclude Include="LookupTable.h">
+      <Filter>inc</Filter>
+    </ClInclude>
+    <ClInclude Include="ProbabilityState.h">
+      <Filter>inc</Filter>
+    </ClInclude>
+    <ClInclude Include="ProbabilityStateMachine.h">
+      <Filter>inc</Filter>
+    </ClInclude>
+    <ClInclude Include="GlobalStateInfo.h">
+      <Filter>inc</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>

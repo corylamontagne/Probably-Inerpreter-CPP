@@ -15,9 +15,11 @@
 #define FUNCTION_PROBABILITY_GATE 100000
 #define IF_BLOCK_PROBABILITY 10000
 
-//GLOBAL CONFIG
 char array[2046] = { 0 };
 char *ptr = array;
+
+#if 0
+//GLOBAL CONFIG
 
 bool equalityCheckPass = true, ifBlockStarted = true;
 char x = 0, y = 0, z = 0;
@@ -143,8 +145,8 @@ InstructionObject MoveForward(std::make_pair(new MovF(), high), std::make_pair(n
 InstructionObject Decrement(std::make_pair(new Sub(), high), std::make_pair(new Add(), low));
 InstructionObject MoveBackward(std::make_pair(new MovB(), high), std::make_pair(new MovF(), low));
 
-void IncrementInstructionCount() 
-{ 
+void IncrementInstructionCount()
+{
 	instructionCount++;
 	if (lastInstructionCount > 0)
 	{
@@ -210,7 +212,7 @@ bool ProcessScript(std::string script)
 					equalityCheckPass = !equalityCheckPass;
 				}
 			}
-				break;
+			break;
 			case 'x':
 				set = false;
 				x = *ptr;
@@ -311,7 +313,7 @@ bool ProcessScript(std::string script)
 					executingFunctionName = f;
 					//set gate multiplier
 					int gateProbability = distribution(generator);
-					if (gateProbability < FUNCTION_PROBABILITY_GATE*100)
+					if (gateProbability < FUNCTION_PROBABILITY_GATE * 100)
 					{
 						//down
 						gateMultiplier = 1000;
@@ -368,8 +370,8 @@ bool ProcessScript(std::string script)
 
 int main()
 {
-	//std::ifstream file("test.prob");
-	std::ifstream file("testprob.prob");
+	std::ifstream file("test.prob");
+	//std::ifstream file("testprob.prob");
 	std::string contents((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
 
 	if (!ProcessScript(contents))
@@ -378,7 +380,7 @@ int main()
 	}
 
 	std::cout << std::endl;
-	std::cout << std::endl << std::setprecision(20) << "Intended Probability: " << mainProbability * 100  << "%" << std::endl;
+	std::cout << std::endl << std::setprecision(20) << "Intended Probability: " << mainProbability * 100 << "%" << std::endl;
 	std::cout << std::setprecision(20) << "Chances of actual outcome: " << mainOccuredProbabiltiy * 100 << "%" << std::endl;
 
 	file.close();
@@ -386,3 +388,83 @@ int main()
 	while (!std::cin.get()) {}
 	return 0;
 }
+#else
+#include "InstructionObject.h"
+#include "LookupTable.h"
+#include "GlobalStateInfo.h"
+
+void SetUpLookupTable(Configuration config)
+{
+	//reusable lambdas
+	std::function<void()> nop = [](void) {};
+	std::function<void()> increment = [](void) {(*ptr)++; };
+	std::function<void()> decrement = [](void) {(*ptr)--; };
+	std::function<void()> forward = [](void) {ptr++; };
+	std::function<void()> backward = [](void) {ptr--; };
+	std::function<void()> output = [](void) {std::cout << *ptr; };
+
+	//table setup
+	gLookup.AddInstruction("i", new InstructionObject<void>(config, Instructions::Instruction<void>(increment), (MAX_PROB - (MIN_PROB + NOP_PROB)),
+																	Instructions::Instruction<void>(decrement), MIN_PROB, NOP_PROB));
+	gLookup.AddInstruction("d", new InstructionObject<void>(config, Instructions::Instruction<void>(decrement), (MAX_PROB - (MIN_PROB + NOP_PROB)),
+																	Instructions::Instruction<void>(increment), MIN_PROB, NOP_PROB));
+
+	gLookup.AddInstruction("f", new InstructionObject<void>(config, Instructions::Instruction<void>(forward), (MAX_PROB - (MIN_PROB + NOP_PROB)),
+																	Instructions::Instruction<void>(backward), MIN_PROB, NOP_PROB));
+	gLookup.AddInstruction("b", new InstructionObject<void>(config, Instructions::Instruction<void>(backward), (MAX_PROB - (MIN_PROB + NOP_PROB)),
+																	Instructions::Instruction<void>(forward), MIN_PROB, NOP_PROB));
+
+	gLookup.AddInstruction("o", new InstructionObject<void>(config, Instructions::Instruction<void>(output), MAX_PROB,
+																	Instructions::Instruction<void>(nop), 0, 0));
+
+	gLookup.AddInstruction("x", new InstructionObject<void>(config, Instructions::Instruction<void>([]() {gXRegister = (*ptr); }), MAX_PROB,
+																	Instructions::Instruction<void>(nop), 0, 0));
+	gLookup.AddInstruction("y", new InstructionObject<void>(config, Instructions::Instruction<void>([]() {gYRegister = (*ptr); }), MAX_PROB,
+																	Instructions::Instruction<void>(nop), 0, 0));
+
+	gLookup.AddInstruction("=", new InstructionObject<void>(config, Instructions::Instruction<void>([]() {registerCheckPassed = (gXRegister == gYRegister); }), (MAX_PROB - (MIN_PROB + NOP_PROB)),
+																	Instructions::Instruction<void>([]() {registerCheckPassed = (gXRegister != gYRegister); }), MIN_PROB, NOP_PROB));
+
+	gLookup.AddInstruction("#", new InstructionObject<void>(config, Instructions::Instruction<void>([]() {gFunctionParseMode = !gFunctionParseMode; }), MAX_PROB,
+																	Instructions::Instruction<void>(nop), 0, 0));
+}
+
+void Process(const std::string&input)
+{
+	for (std::string::const_iterator it = input.begin(); it != input.end(); ++it)
+	{
+		if (*it == '\n') {continue;}
+
+		//TODO: Revisit this, I fucked it up
+		//I dont want to have to call out the template type explicitly
+		InstructionObject<void>* instruction = dynamic_cast<InstructionObject<void>*>(gLookup.FetchInstruction(std::string(1, *it)));
+		if (instruction)
+		{
+			(*instruction)(gDistribution(gGenerator), 0);
+		}
+		else
+		{
+			std::cout << "Unknown instruction " << *it << " script failed" << std::endl;
+		}
+	}
+}
+
+int main()
+{
+	Configuration config = Configuration(MAX_PROB, MIN_PROB, NOP_PROB, FUNCTION_PROBABILITY_GATE, IF_BLOCK_PROBABILITY, MAX_INSTR);
+	SetUpLookupTable(config);
+
+	//load the script
+	//std::ifstream file("test.prob");
+	std::ifstream file("testprob.prob");
+	std::string contents((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+
+	//process the data
+	Process(contents);
+
+	//output the final probabilities(optional)
+
+	while (!std::cin.get()) {}
+	return 0;
+}
+#endif
