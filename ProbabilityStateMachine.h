@@ -1,5 +1,6 @@
 #pragma once
 #include "ProbabilityState.h"
+#include "Configuration.h"
 
 class ProbabilityStateMachine
 {
@@ -10,6 +11,6 @@ public:
 	ProbabilityState* GetCurrentState() { return mCurrentState; }
 private:
 	ProbabilityState* mCurrentState;
-
+	Configuration mConfig;
 };
 

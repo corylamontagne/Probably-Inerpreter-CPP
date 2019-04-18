@@ -12,7 +12,7 @@
 #define MIN_PROB 500
 #define NOP_PROB 100
 #define MAX_INSTR 20
-#define FUNCTION_PROBABILITY_GATE 100000
+#define FUNCTION_PROBABILITY_GATE 10000
 #define IF_BLOCK_PROBABILITY 10000
 
 char array[2046] = { 0 };
@@ -414,7 +414,8 @@ void Process(const std::string&input)
 		BaseInstruction* instruction = gLookup.FetchInstruction(std::string(1, *it));
 		if (instruction && (!functionBuild.functionParseMode || *it == ';'))
 		{
-			(*instruction)(gDistribution(gGenerator), 0);
+			//TODO: Apply probability gate logic
+			(*instruction)(gDistribution(gGenerator), 0, gProbabilityModifier);
 		}
 		else
 		{
@@ -430,7 +431,22 @@ void Process(const std::string&input)
 				std::string func = gFunctionLookup.FetchFunction(std::string(1, *it));
 				if (!func.empty())
 				{
+					//TODO: apply function probability gate
+					int gateProbability = gDistribution(gGenerator);
+					if (gateProbability < FUNCTION_PROBABILITY_GATE * 100)
+					{
+						//down
+						gProbabilityModifier = 1000.0;
+					}
+					else if (gateProbability > MAX_PROB - FUNCTION_PROBABILITY_GATE)
+					{
+						//up
+						gProbabilityModifier = 0.1;
+					}
+
 					Process(func);
+
+					gProbabilityModifier = 1, 0;
 				}
 				else
 				{

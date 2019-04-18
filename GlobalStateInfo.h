@@ -16,6 +16,7 @@ Configuration gConfig;
 unsigned gSeed = (unsigned int)std::chrono::system_clock::now().time_since_epoch().count();
 std::default_random_engine gGenerator(gSeed);
 std::uniform_int_distribution<> gDistribution(0, MAX_PROB);
+double gProbabilityModifier = 1.0;
 
 struct FunctionBuildData
 {
