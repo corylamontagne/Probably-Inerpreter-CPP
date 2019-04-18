@@ -399,23 +399,29 @@ void Process(const std::string&input)
 	{
 		if (*it == '\n') { continue; }
 
+		bool executeNextInstruction = gRegisterCheckPassed;
+		gRegisterCheckPassed = true;
+
+		//in function parse mode, we add instructions to a separate string to execute later
 		if (functionBuild.functionParseMode && !functionBuild.currentFunctionName.empty() && *it != ';')
 		{
 			functionBuild.instructionList += std::string(1, *it);
 			continue;
 		}
+		//when we exit function parse mode, store off the function in the lookup table under the instructon name 
+		//and reset the function build data
 		else if (functionBuild.functionParseMode && !functionBuild.currentFunctionName.empty() && *it == ';')
 		{
 			gFunctionLookup.AddFunction(functionBuild.currentFunctionName, functionBuild.instructionList);
 			functionBuild.ResetFunctionBuildData();
 			continue;
 		}
-		//fecth and invoke the instructino if valid
+		//fetch and invoke the instruction if valid and if the last register check passed
 		BaseInstruction* instruction = gLookup.FetchInstruction(std::string(1, *it));
-		if (instruction && (!functionBuild.functionParseMode || *it == ';'))
+		if (executeNextInstruction && instruction && (!functionBuild.functionParseMode || *it == ';'))
 		{
 			//TODO: Apply probability gate logic
-			(*instruction)(gDistribution(gGenerator), 0, gProbabilityModifier);
+			(*instruction)(GetMaxProbabilityRoll(), 0, gProbabilityMultiplier);
 		}
 		else
 		{
@@ -431,22 +437,29 @@ void Process(const std::string&input)
 				std::string func = gFunctionLookup.FetchFunction(std::string(1, *it));
 				if (!func.empty())
 				{
-					//TODO: apply function probability gate
-					int gateProbability = gDistribution(gGenerator);
-					if (gateProbability < FUNCTION_PROBABILITY_GATE * 100)
+					//do not execute the function if the register check fails
+					if (executeNextInstruction)
 					{
-						//down
-						gProbabilityModifier = 1000.0;
-					}
-					else if (gateProbability > MAX_PROB - FUNCTION_PROBABILITY_GATE)
-					{
-						//up
-						gProbabilityModifier = 0.1;
-					}
+						//determine the probabilities for the function
+						int gateProbability = GetMaxProbabilityRoll();
+						if (gateProbability < FUNCTION_PROBABILITY_GATE * 100)
+						{
+							//down
+							gProbabilityMultiplier = 1000.0;
+						}
+						else if (gateProbability > MAX_PROB - FUNCTION_PROBABILITY_GATE)
+						{
+							//up
+							gProbabilityMultiplier = 0.1;
+						}
 
-					Process(func);
+						//execute the function
+						Process(func);
 
-					gProbabilityModifier = 1, 0;
+						//TODO: Make this better? Global single var for multiplier is no bueno
+						//reset the probability modifier
+						gProbabilityMultiplier = 1, 0;
+					}
 				}
 				else
 				{
@@ -467,15 +480,17 @@ void SetUpLookupTable(Configuration config)
 	std::function<void()> backward = [](void) {ptr--; };
 	std::function<void()> output = [](void) {std::cout << *ptr; };
 
+	int highEndProbability = (MAX_PROB - (MIN_PROB + NOP_PROB));
+
 	//table setup
-	gLookup.AddInstruction("i", new InstructionObject<void>(config, Instructions::Instruction<void>(increment), (MAX_PROB - (MIN_PROB + NOP_PROB)),
+	gLookup.AddInstruction("i", new InstructionObject<void>(config, Instructions::Instruction<void>(increment), highEndProbability,
 		Instructions::Instruction<void>(decrement), MIN_PROB, NOP_PROB));
-	gLookup.AddInstruction("d", new InstructionObject<void>(config, Instructions::Instruction<void>(decrement), (MAX_PROB - (MIN_PROB + NOP_PROB)),
+	gLookup.AddInstruction("d", new InstructionObject<void>(config, Instructions::Instruction<void>(decrement), highEndProbability,
 		Instructions::Instruction<void>(increment), MIN_PROB, NOP_PROB));
 
-	gLookup.AddInstruction("f", new InstructionObject<void>(config, Instructions::Instruction<void>(forward), (MAX_PROB - (MIN_PROB + NOP_PROB)),
+	gLookup.AddInstruction("f", new InstructionObject<void>(config, Instructions::Instruction<void>(forward), highEndProbability,
 		Instructions::Instruction<void>(backward), MIN_PROB, NOP_PROB));
-	gLookup.AddInstruction("b", new InstructionObject<void>(config, Instructions::Instruction<void>(backward), (MAX_PROB - (MIN_PROB + NOP_PROB)),
+	gLookup.AddInstruction("b", new InstructionObject<void>(config, Instructions::Instruction<void>(backward), highEndProbability,
 		Instructions::Instruction<void>(forward), MIN_PROB, NOP_PROB));
 
 	gLookup.AddInstruction("o", new InstructionObject<void>(config, Instructions::Instruction<void>(output), MAX_PROB,
@@ -486,8 +501,8 @@ void SetUpLookupTable(Configuration config)
 	gLookup.AddInstruction("y", new InstructionObject<void>(config, Instructions::Instruction<void>([]() {gYRegister = (*ptr); }), MAX_PROB,
 		Instructions::Instruction<void>(nop), 0, 0));
 
-	gLookup.AddInstruction("=", new InstructionObject<void>(config, Instructions::Instruction<void>([]() {registerCheckPassed = (gXRegister == gYRegister); }), (MAX_PROB - (MIN_PROB + NOP_PROB)),
-		Instructions::Instruction<void>([]() {registerCheckPassed = (gXRegister != gYRegister); }), MIN_PROB, NOP_PROB));
+	gLookup.AddInstruction("=", new InstructionObject<void>(config, Instructions::Instruction<void>([]() {gRegisterCheckPassed = (gXRegister == gYRegister);}), highEndProbability,
+		Instructions::Instruction<void>([]() {gRegisterCheckPassed = (gXRegister != gYRegister); }), MIN_PROB, NOP_PROB));
 
 	gLookup.AddInstruction("#", new InstructionObject<void>(config, Instructions::Instruction<void>([]() {functionBuild.functionParseMode = true; }), MAX_PROB,
 		Instructions::Instruction<void>(nop), 0, 0));
@@ -499,8 +514,8 @@ int main()
 	SetUpLookupTable(gConfig);
 
 	//load the script
-	std::ifstream file("test.prob");
-	//std::ifstream file("testprob.prob");
+	//std::ifstream file("test.prob");
+	std::ifstream file("testprob.prob");
 	std::string contents((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
 
 	//process the data
