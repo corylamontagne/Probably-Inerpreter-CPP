@@ -4,12 +4,12 @@ UNFUCK THE HACK(Rewrite interpreter)
 Proper script parsing
 Big int for better probability ranges
 Recursion
+Add probability gates back in
 Adding probability gate to output(input?).
 Unit tests?
 
 BUGS:
 
-occurred probability
 
 CONSIDERATIONS:
 

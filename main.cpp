@@ -393,6 +393,54 @@ int main()
 #include "LookupTable.h"
 #include "GlobalStateInfo.h"
 
+void Process(const std::string&input)
+{
+	for (std::string::const_iterator it = input.begin(); it != input.end(); ++it)
+	{
+		if (*it == '\n') { continue; }
+
+		if (functionBuild.functionParseMode && !functionBuild.currentFunctionName.empty() && *it != ';')
+		{
+			functionBuild.instructionList += std::string(1, *it);
+			continue;
+		}
+		else if (functionBuild.functionParseMode && !functionBuild.currentFunctionName.empty() && *it == ';')
+		{
+			gFunctionLookup.AddFunction(functionBuild.currentFunctionName, functionBuild.instructionList);
+			functionBuild.ResetFunctionBuildData();
+			continue;
+		}
+		//fecth and invoke the instructino if valid
+		BaseInstruction* instruction = gLookup.FetchInstruction(std::string(1, *it));
+		if (instruction && (!functionBuild.functionParseMode || *it == ';'))
+		{
+			(*instruction)(gDistribution(gGenerator), 0);
+		}
+		else
+		{
+			//we have entered functino mode, store off first character as the functino identifier
+			if (functionBuild.functionParseMode && functionBuild.currentFunctionName.empty())
+			{
+				//set the function name
+				functionBuild.currentFunctionName = std::string(1, *it);
+			}
+			else
+			{
+				//we need to execute a function if we find one, otherwise the instruction is invalid
+				std::string func = gFunctionLookup.FetchFunction(std::string(1, *it));
+				if (!func.empty())
+				{
+					Process(func);
+				}
+				else
+				{
+					std::cout << "Unknown instruction " << *it << " script failed" << std::endl;
+				}
+			}
+		}
+	}
+}
+
 void SetUpLookupTable(Configuration config)
 {
 	//reusable lambdas
@@ -405,58 +453,38 @@ void SetUpLookupTable(Configuration config)
 
 	//table setup
 	gLookup.AddInstruction("i", new InstructionObject<void>(config, Instructions::Instruction<void>(increment), (MAX_PROB - (MIN_PROB + NOP_PROB)),
-																	Instructions::Instruction<void>(decrement), MIN_PROB, NOP_PROB));
+		Instructions::Instruction<void>(decrement), MIN_PROB, NOP_PROB));
 	gLookup.AddInstruction("d", new InstructionObject<void>(config, Instructions::Instruction<void>(decrement), (MAX_PROB - (MIN_PROB + NOP_PROB)),
-																	Instructions::Instruction<void>(increment), MIN_PROB, NOP_PROB));
+		Instructions::Instruction<void>(increment), MIN_PROB, NOP_PROB));
 
 	gLookup.AddInstruction("f", new InstructionObject<void>(config, Instructions::Instruction<void>(forward), (MAX_PROB - (MIN_PROB + NOP_PROB)),
-																	Instructions::Instruction<void>(backward), MIN_PROB, NOP_PROB));
+		Instructions::Instruction<void>(backward), MIN_PROB, NOP_PROB));
 	gLookup.AddInstruction("b", new InstructionObject<void>(config, Instructions::Instruction<void>(backward), (MAX_PROB - (MIN_PROB + NOP_PROB)),
-																	Instructions::Instruction<void>(forward), MIN_PROB, NOP_PROB));
+		Instructions::Instruction<void>(forward), MIN_PROB, NOP_PROB));
 
 	gLookup.AddInstruction("o", new InstructionObject<void>(config, Instructions::Instruction<void>(output), MAX_PROB,
-																	Instructions::Instruction<void>(nop), 0, 0));
+		Instructions::Instruction<void>(nop), 0, 0));
 
 	gLookup.AddInstruction("x", new InstructionObject<void>(config, Instructions::Instruction<void>([]() {gXRegister = (*ptr); }), MAX_PROB,
-																	Instructions::Instruction<void>(nop), 0, 0));
+		Instructions::Instruction<void>(nop), 0, 0));
 	gLookup.AddInstruction("y", new InstructionObject<void>(config, Instructions::Instruction<void>([]() {gYRegister = (*ptr); }), MAX_PROB,
-																	Instructions::Instruction<void>(nop), 0, 0));
+		Instructions::Instruction<void>(nop), 0, 0));
 
 	gLookup.AddInstruction("=", new InstructionObject<void>(config, Instructions::Instruction<void>([]() {registerCheckPassed = (gXRegister == gYRegister); }), (MAX_PROB - (MIN_PROB + NOP_PROB)),
-																	Instructions::Instruction<void>([]() {registerCheckPassed = (gXRegister != gYRegister); }), MIN_PROB, NOP_PROB));
+		Instructions::Instruction<void>([]() {registerCheckPassed = (gXRegister != gYRegister); }), MIN_PROB, NOP_PROB));
 
-	gLookup.AddInstruction("#", new InstructionObject<void>(config, Instructions::Instruction<void>([]() {gFunctionParseMode = !gFunctionParseMode; }), MAX_PROB,
-																	Instructions::Instruction<void>(nop), 0, 0));
-}
-
-void Process(const std::string&input)
-{
-	for (std::string::const_iterator it = input.begin(); it != input.end(); ++it)
-	{
-		if (*it == '\n') {continue;}
-
-		//TODO: Revisit this, I fucked it up
-		//I dont want to have to call out the template type explicitly
-		InstructionObject<void>* instruction = dynamic_cast<InstructionObject<void>*>(gLookup.FetchInstruction(std::string(1, *it)));
-		if (instruction)
-		{
-			(*instruction)(gDistribution(gGenerator), 0);
-		}
-		else
-		{
-			std::cout << "Unknown instruction " << *it << " script failed" << std::endl;
-		}
-	}
+	gLookup.AddInstruction("#", new InstructionObject<void>(config, Instructions::Instruction<void>([]() {functionBuild.functionParseMode = true; }), MAX_PROB,
+		Instructions::Instruction<void>(nop), 0, 0));
 }
 
 int main()
 {
-	Configuration config = Configuration(MAX_PROB, MIN_PROB, NOP_PROB, FUNCTION_PROBABILITY_GATE, IF_BLOCK_PROBABILITY, MAX_INSTR);
-	SetUpLookupTable(config);
+	gConfig = Configuration(MAX_PROB, MIN_PROB, NOP_PROB, FUNCTION_PROBABILITY_GATE, IF_BLOCK_PROBABILITY, MAX_INSTR);
+	SetUpLookupTable(gConfig);
 
 	//load the script
-	//std::ifstream file("test.prob");
-	std::ifstream file("testprob.prob");
+	std::ifstream file("test.prob");
+	//std::ifstream file("testprob.prob");
 	std::string contents((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
 
 	//process the data

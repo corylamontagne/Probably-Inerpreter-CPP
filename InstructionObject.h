@@ -9,6 +9,7 @@ class BaseInstruction
 public:
 	BaseInstruction() {}
 	virtual ~BaseInstruction() {}
+	virtual void operator()(unsigned long long probability, int probabilityModifier) = 0;
 };
 
 template<typename T>
@@ -34,6 +35,7 @@ public:
 		}
 
 	}
+
 private:
 	typedef std::pair<Instructions::Instruction<T>, unsigned long long> InstructionProbabilityObject;
 	std::tuple< InstructionProbabilityObject, InstructionProbabilityObject, InstructionProbabilityObject > mInstructions;
