@@ -393,7 +393,7 @@ int main()
 #include "LookupTable.h"
 #include "GlobalStateInfo.h"
 
-void Process(const std::string&input)
+bool Process(const std::string&input)
 {
 	for (std::string::const_iterator it = input.begin(); it != input.end(); ++it)
 	{
@@ -420,8 +420,9 @@ void Process(const std::string&input)
 		BaseInstruction* instruction = gLookup.FetchInstruction(std::string(1, *it));
 		if (executeNextInstruction && instruction && (!functionBuild.functionParseMode || *it == ';'))
 		{
+			gStateMachine->Tick();
 			//TODO: Apply probability gate logic
-			(*instruction)(GetMaxProbabilityRoll(), 0, gProbabilityMultiplier);
+			(*instruction)(GetMaxProbabilityRoll(), gStateMachine->GetCurrentProbabiltiyModifier(), gProbabilityMultiplier);
 		}
 		else
 		{
@@ -454,20 +455,25 @@ void Process(const std::string&input)
 						}
 
 						//execute the function
-						Process(func);
+						if (!Process(func))
+						{
+							return false;
+						}
 
 						//TODO: Make this better? Global single var for multiplier is no bueno
 						//reset the probability modifier
-						gProbabilityMultiplier = 1, 0;
+						gProbabilityMultiplier = 1.0;
 					}
 				}
 				else
 				{
-					std::cout << "Unknown instruction " << *it << " script failed" << std::endl;
+					std::cout << "Unknown instruction " << *it << ". Script failed" << std::endl;
+					return false;
 				}
 			}
 		}
 	}
+	return true;
 }
 
 void SetUpLookupTable(Configuration config)
@@ -479,6 +485,8 @@ void SetUpLookupTable(Configuration config)
 	std::function<void()> forward = [](void) {ptr++; };
 	std::function<void()> backward = [](void) {ptr--; };
 	std::function<void()> output = [](void) {std::cout << *ptr; };
+	std::function<void()> incState = [](void) {gStateMachine->SetState(ProbabilityStateMachine::DEC_STATE); };
+	std::function<void()> decState = [](void) {gStateMachine->SetState(ProbabilityStateMachine::INC_STATE); };
 
 	int highEndProbability = (MAX_PROB - (MIN_PROB + NOP_PROB));
 
@@ -501,6 +509,11 @@ void SetUpLookupTable(Configuration config)
 	gLookup.AddInstruction("y", new InstructionObject<void>(config, Instructions::Instruction<void>([]() {gYRegister = (*ptr); }), MAX_PROB,
 		Instructions::Instruction<void>(nop), 0, 0));
 
+	gLookup.AddInstruction("+", new InstructionObject<void>(config, Instructions::Instruction<void>(incState), highEndProbability,
+		Instructions::Instruction<void>(decState), MIN_PROB, NOP_PROB));
+	gLookup.AddInstruction("-", new InstructionObject<void>(config, Instructions::Instruction<void>(decState), highEndProbability,
+		Instructions::Instruction<void>(incState), MIN_PROB, NOP_PROB));
+
 	gLookup.AddInstruction("=", new InstructionObject<void>(config, Instructions::Instruction<void>([]() {gRegisterCheckPassed = (gXRegister == gYRegister);}), highEndProbability,
 		Instructions::Instruction<void>([]() {gRegisterCheckPassed = (gXRegister != gYRegister); }), MIN_PROB, NOP_PROB));
 
@@ -512,10 +525,11 @@ int main()
 {
 	gConfig = Configuration(MAX_PROB, MIN_PROB, NOP_PROB, FUNCTION_PROBABILITY_GATE, IF_BLOCK_PROBABILITY, MAX_INSTR);
 	SetUpLookupTable(gConfig);
+	gStateMachine = new ProbabilityStateMachine(gConfig);
 
 	//load the script
-	//std::ifstream file("test.prob");
-	std::ifstream file("testprob.prob");
+	std::ifstream file("test.prob");
+	//std::ifstream file("testprob.prob");
 	std::string contents((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
 
 	//process the data
@@ -524,6 +538,9 @@ int main()
 	//output the final probabilities(optional)
 
 	while (!std::cin.get()) {}
+
+	delete gStateMachine;
+
 	return 0;
 }
 #endif

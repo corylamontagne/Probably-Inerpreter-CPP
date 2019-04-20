@@ -1,8 +1,6 @@
 FEATURES:
 
 Big int for better probability ranges
-Add probability states back in and the instructions that invoke them
-Add probability gates back in for if check
 Adding probability gate to output(input?).
 Proper configuration
 Unit tests?

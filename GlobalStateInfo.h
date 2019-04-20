@@ -2,6 +2,7 @@
 #include "LookupTable.h"
 #include "Configuration.h"
 #include <string>
+#include "ProbabilityStateMachine.h"
 
 //TODO: Eventually all this information needs a proper place to live.
 //this is its home for the time being until the important things are done
@@ -18,6 +19,8 @@ std::default_random_engine gGenerator(gSeed);
 std::uniform_int_distribution<> gDistribution(0, MAX_PROB);
 int GetMaxProbabilityRoll() { return gDistribution(gGenerator); }
 double gProbabilityMultiplier = 1.0;
+
+ProbabilityStateMachine* gStateMachine;
 
 struct FunctionBuildData
 {

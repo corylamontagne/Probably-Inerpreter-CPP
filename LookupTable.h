@@ -11,6 +11,7 @@ public:
 
 	bool AddInstruction(std::string, BaseInstruction*);
 	BaseInstruction* FetchInstruction(const std::string &identifier);
+	void CleanUp();
 private:
 	std::unordered_map<std::string, BaseInstruction*> mInstructionTable;
 };

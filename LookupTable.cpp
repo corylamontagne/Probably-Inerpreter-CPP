@@ -6,6 +6,7 @@ LookupTable::LookupTable()
 
 LookupTable::~LookupTable()
 {
+	CleanUp();
 }
 
 bool LookupTable::AddInstruction(std::string identifier, BaseInstruction*instruction)
@@ -19,6 +20,14 @@ bool LookupTable::AddInstruction(std::string identifier, BaseInstruction*instruc
 		}
 	}
 	return false;
+}
+
+void LookupTable::CleanUp()
+{
+	for (auto i = mInstructionTable.begin(); i != mInstructionTable.end(); ++i)
+	{
+		delete i->second;
+	}
 }
 
 BaseInstruction* LookupTable::FetchInstruction(const std::string &identifier)

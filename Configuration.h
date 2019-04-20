@@ -8,6 +8,10 @@ public:
 					mMaximumProbability(maxP), mMinimumProbability(minP), mNopProbability(nopP), mFunctionGateProbability(funcP), mConditionalGateProbability(condP),
 					mMaximimInstructionCount(instr) {}
 	~Configuration() {}
+
+	int GetMaxInstructionCount() { return mMaximimInstructionCount; }
+	unsigned long long GetMinProbability() { return mMinimumProbability; }
+	unsigned long long GetMaxProbability() { return mMaximumProbability; }
 private:
 	unsigned long long mMaximumProbability;
 	unsigned long long mMinimumProbability;

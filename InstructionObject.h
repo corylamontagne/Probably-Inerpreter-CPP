@@ -9,7 +9,7 @@ class BaseInstruction
 public:
 	BaseInstruction() {}
 	virtual ~BaseInstruction() {}
-	virtual void operator()(unsigned long long probability, int probabilityModifier, double probMult) = 0;
+	virtual void operator()(unsigned long long probability, long long probabilityModifier, double probMult) = 0;
 };
 
 template<typename T>
@@ -25,15 +25,18 @@ public:
 
 	virtual ~InstructionObject() {}
 
-	void operator()(unsigned long long probability, int probabilityModifier, double probMult)
+	void operator()(unsigned long long probability, long long probabilityModifier, double probMult)
 	{
 		unsigned long long finalProbability = (unsigned long long)((probability + probabilityModifier) * probMult);
 
-		if (finalProbability <= std::get<0>(mInstructions).second)
+		if (finalProbability <= std::get<1>(mInstructions).second)
+		{
+			std::get<1>(mInstructions).first();
+		}
+		else if (finalProbability <= std::get<0>(mInstructions).second)
 		{
 			std::get<0>(mInstructions).first();
 		}
-
 	}
 
 private:
