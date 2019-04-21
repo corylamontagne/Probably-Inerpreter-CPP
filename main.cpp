@@ -169,13 +169,13 @@ int main(int argc, char *argv[])
 		std::cout << std::endl << std::endl << "Proper Execution Probability: %" << std::setprecision(10) << gProbability * 100 << std::endl;
 
 		while (!std::cin.get()) {}
-
-		delete gStateMachine;
 	}
 	catch (...)
 	{
 		std::cout << "Script failed to execute." << std::endl;
 	}
+
+	delete gStateMachine;
 
 	return 0;
 }
