@@ -79,8 +79,6 @@ bool Process(const std::string&input)
 							return false;
 						}
 
-						//TODO: Make this better? Global single var for multiplier is no bueno
-						//reset the probability modifier
 						gProbabilityMultiplier = 1.0;
 					}
 				}
