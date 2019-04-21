@@ -6,6 +6,7 @@ Proper configuration
 Unit tests?
 Nested if checks?
 Assignment between registers
+arithmetic
 
 
 BUGS:

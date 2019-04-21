@@ -141,7 +141,7 @@ void SetUpLookupTable(Configuration config)
 		Instructions::Instruction<void>(nop), 0, 0));
 }
 
-int main()
+int main(int argc, char *argv[])
 {
 	try
 	{
@@ -149,9 +149,14 @@ int main()
 		SetUpLookupTable(gConfig);
 		gStateMachine = new ProbabilityStateMachine(gConfig);
 
+		if (argc < 2)
+		{
+			std::cout << "Improper call to interpreter. Script must be provided.";
+			return 0;
+		}
+
 		//load the script
-		std::ifstream file("test.prob");
-		//std::ifstream file("testprob.prob");
+		std::ifstream file(argv[1]);
 
 		//build string of the contents of the file
 		std::string contents((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
