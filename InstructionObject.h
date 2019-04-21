@@ -9,7 +9,7 @@ class BaseInstruction
 public:
 	BaseInstruction() {}
 	virtual ~BaseInstruction() {}
-	virtual void operator()(unsigned long long probability, long long probabilityModifier, double probMult) = 0;
+	virtual double operator()(unsigned long long probability, long long probabilityModifier, double probMult) = 0;
 };
 
 template<typename T>
@@ -25,18 +25,27 @@ public:
 
 	virtual ~InstructionObject() {}
 
-	void operator()(unsigned long long probability, long long probabilityModifier, double probMult)
+	double operator()(unsigned long long probability, long long probabilityModifier, double probMult)
 	{
 		unsigned long long finalProbability = (unsigned long long)((probability + probabilityModifier) * probMult);
+		double executionProbability = 1;
 
 		if (finalProbability <= std::get<1>(mInstructions).second)
 		{
 			std::get<1>(mInstructions).first();
+			executionProbability = (double)std::get<1>(mInstructions).second / (double)configuration.GetMaxProbability();
 		}
 		else if (finalProbability <= std::get<0>(mInstructions).second)
 		{
 			std::get<0>(mInstructions).first();
+			executionProbability = (double)std::get<0>(mInstructions).second / (double)configuration.GetMaxProbability();
 		}
+		else
+		{
+			std::get<2>(mInstructions).first();
+			executionProbability = (double)std::get<2>(mInstructions).second / (double)configuration.GetMaxProbability();
+		}
+		return executionProbability;
 	}
 
 private:

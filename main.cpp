@@ -7,17 +7,6 @@
 #include <iomanip>
 #include <map>
 
-//SETTINGS
-#define MAX_PROB 1000000000
-#define MIN_PROB 500
-#define NOP_PROB 100
-#define MAX_INSTR 20
-#define FUNCTION_PROBABILITY_GATE 10000
-#define IF_BLOCK_PROBABILITY 10000
-
-char array[2046] = { 0 };
-char *ptr = array;
-
 #include "InstructionObject.h"
 #include "LookupTable.h"
 #include "GlobalStateInfo.h"
@@ -26,20 +15,21 @@ bool Process(const std::string&input)
 {
 	for (std::string::const_iterator it = input.begin(); it != input.end(); ++it)
 	{
-		if (*it == 'q') { return true; }
+		if (*it == gQuit) { return true; }
 
 		bool executeNextInstruction = gRegisterCheckPassed;
+		bool found = false;
 		gRegisterCheckPassed = true;
 
 		//in function parse mode, we add instructions to a separate string to execute later
-		if (functionBuild.functionParseMode && !functionBuild.currentFunctionName.empty() && *it != ';')
+		if (functionBuild.functionParseMode && !functionBuild.currentFunctionName.empty() && (*it != gEndFunction))
 		{
 			functionBuild.instructionList += std::string(1, *it);
 			continue;
 		}
 		//when we exit function parse mode, store off the function in the lookup table under the instructon name 
 		//and reset the function build data
-		else if (functionBuild.functionParseMode && !functionBuild.currentFunctionName.empty() && *it == ';')
+		else if (functionBuild.functionParseMode && !functionBuild.currentFunctionName.empty() && (*it == gEndFunction))
 		{
 			gFunctionLookup.AddFunction(functionBuild.currentFunctionName, functionBuild.instructionList);
 			functionBuild.ResetFunctionBuildData();
@@ -47,11 +37,11 @@ bool Process(const std::string&input)
 		}
 		//fetch and invoke the instruction if valid and if the last register check passed
 		BaseInstruction* instruction = gLookup.FetchInstruction(std::string(1, *it));
-		if (executeNextInstruction && instruction && (!functionBuild.functionParseMode || *it == ';'))
+		found = (instruction != nullptr);
+		if (executeNextInstruction && instruction && (!functionBuild.functionParseMode || (*it == gEndFunction)))
 		{
 			gStateMachine->Tick();
-			//TODO: Apply probability gate logic
-			(*instruction)(GetMaxProbabilityRoll(), gStateMachine->GetCurrentProbabiltiyModifier(), gProbabilityMultiplier);
+			gProbability *= (*instruction)(GetMaxProbabilityRoll(), gStateMachine->GetCurrentProbabiltiyModifier(), gProbabilityMultiplier);
 		}
 		else
 		{
@@ -72,7 +62,7 @@ bool Process(const std::string&input)
 					{
 						//determine the probabilities for the function
 						int gateProbability = GetMaxProbabilityRoll();
-						if (gateProbability < FUNCTION_PROBABILITY_GATE * 100)
+						if (gateProbability < FUNCTION_PROBABILITY_GATE)
 						{
 							//down
 							gProbabilityMultiplier = gConfig.GetFunctionDownMult();
@@ -96,7 +86,10 @@ bool Process(const std::string&input)
 				}
 				else
 				{
-					std::cout << "Unknown instruction " << *it << ". Script failed" << std::endl;
+					if (!found)
+					{
+						std::cout << "Unknown instruction " << *it << ". Script failed" << std::endl;
+					}
 					return false;
 				}
 			}
@@ -152,27 +145,34 @@ void SetUpLookupTable(Configuration config)
 
 int main()
 {
-	gConfig = Configuration(MAX_PROB, MIN_PROB, NOP_PROB, FUNCTION_PROBABILITY_GATE, IF_BLOCK_PROBABILITY, MAX_INSTR);
-	SetUpLookupTable(gConfig);
-	gStateMachine = new ProbabilityStateMachine(gConfig);
+	try
+	{
+		gConfig = Configuration(MAX_PROB, MIN_PROB, NOP_PROB, FUNCTION_PROBABILITY_GATE, IF_BLOCK_PROBABILITY, MAX_INSTR);
+		SetUpLookupTable(gConfig);
+		gStateMachine = new ProbabilityStateMachine(gConfig);
 
-	//load the script
-	std::ifstream file("test.prob");
-	//std::ifstream file("testprob.prob");
+		//load the script
+		std::ifstream file("test.prob");
+		//std::ifstream file("testprob.prob");
 
-	//build string of the contents of the file
-	std::string contents((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
-	//purge newlines
-	contents.erase(std::remove(contents.begin(), contents.end(), '\n'), contents.end());
+		//build string of the contents of the file
+		std::string contents((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+		//purge newlines
+		contents.erase(std::remove(contents.begin(), contents.end(), '\n'), contents.end());
 
-	//process the data
-	Process(contents);
+		//process the data
+		Process(contents);
 
-	//TODO: output the final probabilities(optional)
+		std::cout << std::endl << std::endl << "Proper Execution Probability: %" << std::setprecision(10) << gProbability * 100 << std::endl;
 
-	while (!std::cin.get()) {}
+		while (!std::cin.get()) {}
 
-	delete gStateMachine;
+		delete gStateMachine;
+	}
+	catch (...)
+	{
+		std::cout << "Script failed to execute." << std::endl;
+	}
 
 	return 0;
 }

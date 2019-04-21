@@ -13,4 +13,4 @@ BUGS:
 CONSIDERATIONS:
 
 Emoji would be intereting. Requires an editor to map emoji to ascii.
-Three variable storage OR Reduced maxc array, each element has a register for comparison.
+Three variable storage OR Reduced maxc array, each element has a register for comparison.
